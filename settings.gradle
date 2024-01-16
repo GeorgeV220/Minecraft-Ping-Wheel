@@ -1,22 +1,22 @@
 pluginManagement {
-	repositories {
-		maven { url "https://maven.fabricmc.net/" }
-		maven { url "https://maven.architectury.dev/" }
-		maven { url "https://maven.minecraftforge.net/" }
-		gradlePluginPortal()
-	}
+    repositories {
+        maven { url "https://maven.fabricmc.net/" }
+        maven { url "https://maven.architectury.dev/" }
+        maven { url "https://maven.minecraftforge.net/" }
+        gradlePluginPortal()
+    }
 }
 
 include("common")
 
 def props = new Properties()
 file("gradle.properties").withInputStream { stream ->
-	props.load(stream)
+    props.load(stream)
 }
 
 def enabledPlatforms = (props["enabled_platforms"] ?: "").split(",")
 enabledPlatforms.each { platform ->
-	include(platform.trim())
+    include(platform.trim())
 }
 
 rootProject.name = "Ping-Wheel"

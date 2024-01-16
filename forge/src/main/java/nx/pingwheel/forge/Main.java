@@ -23,49 +23,49 @@ import static nx.pingwheel.forge.Main.FORGE_ID;
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class Main {
 
-	public static final String FORGE_ID = "pingwheel";
+    public static final String FORGE_ID = "pingwheel";
 
-	public static final EventNetworkChannel PING_LOCATION_CHANNEL_C2S = ChannelBuilder.named(PingLocationPacketC2S.ID).optional().eventNetworkChannel();
-	public static final EventNetworkChannel PING_LOCATION_CHANNEL_S2C = ChannelBuilder.named(PingLocationPacketS2C.ID).optional().eventNetworkChannel();
-	public static final EventNetworkChannel UPDATE_CHANNEL_C2S = ChannelBuilder.named(UpdateChannelPacketC2S.ID).optional().eventNetworkChannel();
+    public static final EventNetworkChannel PING_LOCATION_CHANNEL_C2S = ChannelBuilder.named(PingLocationPacketC2S.ID).optional().eventNetworkChannel();
+    public static final EventNetworkChannel PING_LOCATION_CHANNEL_S2C = ChannelBuilder.named(PingLocationPacketS2C.ID).optional().eventNetworkChannel();
+    public static final EventNetworkChannel UPDATE_CHANNEL_C2S = ChannelBuilder.named(UpdateChannelPacketC2S.ID).optional().eventNetworkChannel();
 
-	@SuppressWarnings({"java:S1118", "the public constructor is required by forge"})
-	public Main() {
-		LOGGER.info("Init");
+    @SuppressWarnings({"java:S1118", "the public constructor is required by forge"})
+    public Main() {
+        LOGGER.info("Init");
 
-		ModVersion = ModList.get().getModContainerById(FORGE_ID)
-			.map(container -> container.getModInfo().getVersion().toString())
-			.orElse("Unknown");
+        ModVersion = ModList.get().getModContainerById(FORGE_ID)
+                .map(container -> container.getModInfo().getVersion().toString())
+                .orElse("Unknown");
 
-		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> Client::new);
+        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> Client::new);
 
-		PING_LOCATION_CHANNEL_C2S.addListener((event) -> {
-			var ctx = event.getSource();
-			var packet = event.getPayload();
+        PING_LOCATION_CHANNEL_C2S.addListener((event) -> {
+            var ctx = event.getSource();
+            var packet = event.getPayload();
 
-			if (packet != null) {
-				var packetCopy = new PacketByteBuf(packet.copy());
-				ctx.enqueueWork(() -> ServerCore.onPingLocation(ctx.getSender(), packetCopy));
-			}
+            if (packet != null) {
+                var packetCopy = new PacketByteBuf(packet.copy());
+                ctx.enqueueWork(() -> ServerCore.onPingLocation(ctx.getSender(), packetCopy));
+            }
 
-			ctx.setPacketHandled(true);
-		});
+            ctx.setPacketHandled(true);
+        });
 
-		UPDATE_CHANNEL_C2S.addListener((event) -> {
-			var ctx = event.getSource();
-			var packet = event.getPayload();
+        UPDATE_CHANNEL_C2S.addListener((event) -> {
+            var ctx = event.getSource();
+            var packet = event.getPayload();
 
-			if (packet != null) {
-				var packetCopy = new PacketByteBuf(packet.copy());
-				ctx.enqueueWork(() -> ServerCore.onChannelUpdate(ctx.getSender(), packetCopy));
-			}
+            if (packet != null) {
+                var packetCopy = new PacketByteBuf(packet.copy());
+                ctx.enqueueWork(() -> ServerCore.onChannelUpdate(ctx.getSender(), packetCopy));
+            }
 
-			ctx.setPacketHandled(true);
-		});
-	}
+            ctx.setPacketHandled(true);
+        });
+    }
 
-	@SubscribeEvent
-	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
-		ServerCore.onPlayerDisconnect((ServerPlayerEntity)event.getEntity());
-	}
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        ServerCore.onPlayerDisconnect((ServerPlayerEntity) event.getEntity());
+    }
 }

@@ -17,36 +17,35 @@ import static nx.pingwheel.common.config.Config.MAX_CHANNEL_LENGTH;
 @Getter
 public class UpdateChannelPacketC2S {
 
-	private String channel;
+    public static final Identifier ID = new Identifier(MOD_ID + "-c2s", "update-channel");
+    private String channel;
 
-	public static final Identifier ID = new Identifier(MOD_ID + "-c2s", "update-channel");
+    public static Optional<UpdateChannelPacketC2S> parse(PacketByteBuf buf) {
+        try {
+            var channel = buf.readString(MAX_CHANNEL_LENGTH);
 
-	public void send() {
-		var netHandler = Game.getNetworkHandler();
+            if (buf.readableBytes() > 0) {
+                return Optional.empty();
+            }
 
-		if (netHandler == null) {
-			return;
-		}
+            return Optional.of(new UpdateChannelPacketC2S(channel));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
 
-		var packet = new PacketByteBuf(Unpooled.buffer());
-		packet.writeIdentifier(UpdateChannelPacketC2S.ID);
+    public void send() {
+        var netHandler = Game.getNetworkHandler();
 
-		packet.writeString(channel, MAX_CHANNEL_LENGTH);
+        if (netHandler == null) {
+            return;
+        }
 
-		netHandler.sendPacket(new CustomPayloadC2SPacket(packet));
-	}
+        var packet = new PacketByteBuf(Unpooled.buffer());
+        packet.writeIdentifier(UpdateChannelPacketC2S.ID);
 
-	public static Optional<UpdateChannelPacketC2S> parse(PacketByteBuf buf) {
-		try {
-			var channel = buf.readString(MAX_CHANNEL_LENGTH);
+        packet.writeString(channel, MAX_CHANNEL_LENGTH);
 
-			if (buf.readableBytes() > 0) {
-				return Optional.empty();
-			}
-
-			return Optional.of(new UpdateChannelPacketC2S(channel));
-		} catch (Exception e) {
-			return Optional.empty();
-		}
-	}
+        netHandler.sendPacket(new CustomPayloadC2SPacket(packet));
+    }
 }

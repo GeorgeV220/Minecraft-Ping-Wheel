@@ -25,86 +25,86 @@ import static nx.pingwheel.forge.Main.PING_LOCATION_CHANNEL_S2C;
 @OnlyIn(Dist.CLIENT)
 public class Client {
 
-	public Client() {
-		ConfigHandler = new ConfigHandler(MOD_ID + ".json", FMLPaths.CONFIGDIR.get());
-		ConfigHandler.load();
+    public Client() {
+        ConfigHandler = new ConfigHandler(MOD_ID + ".json", FMLPaths.CONFIGDIR.get());
+        ConfigHandler.load();
 
-		MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(this);
 
-		registerNetworkPackets();
-		registerReloadListener();
+        registerNetworkPackets();
+        registerReloadListener();
 
-		FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onRegisterKeyBindings);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::onRegisterKeyBindings);
 
-		ModLoadingContext.get().registerExtensionPoint(
-			ConfigScreenFactory.class,
-			() -> new ConfigScreenFactory((client, parent) -> new SettingsScreen(parent))
-		);
-	}
+        ModLoadingContext.get().registerExtensionPoint(
+                ConfigScreenFactory.class,
+                () -> new ConfigScreenFactory((client, parent) -> new SettingsScreen(parent))
+        );
+    }
 
-	private void registerNetworkPackets() {
-		PING_LOCATION_CHANNEL_S2C.addListener((event) -> {
-			var ctx = event.getSource();
-			var packet = event.getPayload();
+    private void registerNetworkPackets() {
+        PING_LOCATION_CHANNEL_S2C.addListener((event) -> {
+            var ctx = event.getSource();
+            var packet = event.getPayload();
 
-			if (packet != null) {
-				ctx.enqueueWork(() -> ClientCore.onPingLocation(packet));
-			}
+            if (packet != null) {
+                ctx.enqueueWork(() -> ClientCore.onPingLocation(packet));
+            }
 
-			ctx.setPacketHandled(true);
-		});
-	}
+            ctx.setPacketHandled(true);
+        });
+    }
 
-	private void registerReloadListener() {
-		var bus = FMLJavaModLoadingContext.get().getModEventBus();
-		bus.addListener((RegisterClientReloadListenersEvent event) -> event.registerReloadListener(new ResourceReloadListener()));
-	}
+    private void registerReloadListener() {
+        var bus = FMLJavaModLoadingContext.get().getModEventBus();
+        bus.addListener((RegisterClientReloadListenersEvent event) -> event.registerReloadListener(new ResourceReloadListener()));
+    }
 
-	private void onRegisterKeyBindings(RegisterKeyMappingsEvent event) {
-		event.register(KEY_BINDING_PING);
-		event.register(KEY_BINDING_SETTINGS);
-	}
+    private void onRegisterKeyBindings(RegisterKeyMappingsEvent event) {
+        event.register(KEY_BINDING_PING);
+        event.register(KEY_BINDING_SETTINGS);
+    }
 
-	@SubscribeEvent
-	public void onClientTick(TickEvent.ClientTickEvent event) {
-		if (event.phase.equals(TickEvent.Phase.END)) {
-			if (KEY_BINDING_PING.wasPressed()) {
-				ClientCore.markLocation();
-			}
+    @SubscribeEvent
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase.equals(TickEvent.Phase.END)) {
+            if (KEY_BINDING_PING.wasPressed()) {
+                ClientCore.markLocation();
+            }
 
-			if (KEY_BINDING_SETTINGS.wasPressed()) {
-				Game.setScreen(new SettingsScreen());
-			}
-		}
-	}
+            if (KEY_BINDING_SETTINGS.wasPressed()) {
+                Game.setScreen(new SettingsScreen());
+            }
+        }
+    }
 
-	@SubscribeEvent
-	public void onClientConnectedToServer(ClientPlayerNetworkEvent.LoggingIn event) {
-		new UpdateChannelPacketC2S(ConfigHandler.getConfig().getChannel()).send();
-	}
+    @SubscribeEvent
+    public void onClientConnectedToServer(ClientPlayerNetworkEvent.LoggingIn event) {
+        new UpdateChannelPacketC2S(ConfigHandler.getConfig().getChannel()).send();
+    }
 
-	@SubscribeEvent
-	public void onRenderWorld(RenderLevelStageEvent event) {
-		if (event.getStage().equals(RenderLevelStageEvent.Stage.AFTER_WEATHER)) {
-			ClientCore.onRenderWorld(event.getPoseStack(), event.getProjectionMatrix(), event.getPartialTick());
-		}
-	}
+    @SubscribeEvent
+    public void onRenderWorld(RenderLevelStageEvent event) {
+        if (event.getStage().equals(RenderLevelStageEvent.Stage.AFTER_WEATHER)) {
+            ClientCore.onRenderWorld(event.getPoseStack(), event.getProjectionMatrix(), event.getPartialTick());
+        }
+    }
 
-	@SubscribeEvent
-	public void onPreGuiRender(RenderGuiOverlayEvent.Pre event) {
-		if (event.getOverlay() == VanillaGuiOverlay.VIGNETTE.type()) {
-			ClientCore.onRenderGUI(event.getGuiGraphics(), event.getPartialTick());
-		}
-	}
+    @SubscribeEvent
+    public void onPreGuiRender(RenderGuiOverlayEvent.Pre event) {
+        if (event.getOverlay() == VanillaGuiOverlay.VIGNETTE.type()) {
+            ClientCore.onRenderGUI(event.getGuiGraphics(), event.getPartialTick());
+        }
+    }
 
-	@SubscribeEvent
-	public void onCommandRegister(RegisterClientCommandsEvent event) {
-		event.getDispatcher().register(ClientCommandBuilder.build((context, success, response) -> {
-			if (success) {
-				context.getSource().sendFeedback(() -> response, false);
-			} else {
-				context.getSource().sendError(response);
-			}
-		}));
-	}
+    @SubscribeEvent
+    public void onCommandRegister(RegisterClientCommandsEvent event) {
+        event.getDispatcher().register(ClientCommandBuilder.build((context, success, response) -> {
+            if (success) {
+                context.getSource().sendFeedback(() -> response, false);
+            } else {
+                context.getSource().sendError(response);
+            }
+        }));
+    }
 }

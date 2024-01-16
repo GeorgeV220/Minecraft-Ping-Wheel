@@ -31,264 +31,263 @@ import static nx.pingwheel.common.ClientGlobal.*;
 
 @Environment(EnvType.CLIENT)
 public class ClientCore {
-	private ClientCore() {}
+    private static final int TPS = 20;
+    private static final Config Config = ConfigHandler.getConfig();
+    private static final ArrayList<PingData> pingRepo = new ArrayList<>();
+    private static boolean queuePing = false;
+    private static ClientWorld lastWorld = null;
+    private static int lastPing = 0;
+    private static int pingSequence = 0;
+    private ClientCore() {
+    }
 
-	private static final int TPS = 20;
+    public static void markLocation() {
+        queuePing = true;
+    }
 
-	private static final Config Config = ConfigHandler.getConfig();
-	private static final ArrayList<PingData> pingRepo = new ArrayList<>();
-	private static boolean queuePing = false;
-	private static ClientWorld lastWorld = null;
-	private static int lastPing = 0;
-	private static int pingSequence = 0;
+    public static void onPingLocation(PacketByteBuf packet) {
+        var pingLocationPacket = PingLocationPacketS2C.parse(packet);
 
-	public static void markLocation() {
-		queuePing = true;
-	}
+        if (pingLocationPacket.isEmpty() || Game.player == null || Game.world == null) {
+            return;
+        }
 
-	public static void onPingLocation(PacketByteBuf packet) {
-		var pingLocationPacket = PingLocationPacketS2C.parse(packet);
+        var pingLocation = pingLocationPacket.get();
 
-		if (pingLocationPacket.isEmpty() || Game.player == null || Game.world == null) {
-			return;
-		}
+        if (!pingLocation.getChannel().equals(Config.getChannel())) {
+            return;
+        }
 
-		var pingLocation = pingLocationPacket.get();
+        if (Config.getPingDistance() < 2048) {
+            var vecToPing = Game.player.getPos().relativize(pingLocation.getPos());
 
-		if (!pingLocation.getChannel().equals(Config.getChannel())) {
-			return;
-		}
+            if (vecToPing.length() > Config.getPingDistance()) {
+                return;
+            }
+        }
 
-		if (Config.getPingDistance() < 2048) {
-			var vecToPing = Game.player.getPos().relativize(pingLocation.getPos());
+        Game.execute(() -> {
+            addOrReplacePing(new PingData(
+                    pingLocation.getPos(),
+                    pingLocation.getEntity(),
+                    pingLocation.getAuthor(),
+                    pingLocation.getSequence(),
+                    (int) Game.world.getTime()
+            ));
 
-			if (vecToPing.length() > Config.getPingDistance()) {
-				return;
-			}
-		}
+            Game.getSoundManager().play(
+                    new DirectionalSoundInstance(
+                            PING_SOUND_EVENT,
+                            SoundCategory.MASTER,
+                            Config.getPingVolume() / 100f,
+                            1f,
+                            pingLocation.getPos()
+                    )
+            );
+        });
+    }
 
-		Game.execute(() -> {
-			addOrReplacePing(new PingData(
-				pingLocation.getPos(),
-				pingLocation.getEntity(),
-				pingLocation.getAuthor(),
-				pingLocation.getSequence(),
-				(int)Game.world.getTime()
-			));
+    public static void onRenderWorld(MatrixStack matrixStack, Matrix4f projectionMatrix, float tickDelta) {
+        if (Game.world == null) {
+            return;
+        }
 
-			Game.getSoundManager().play(
-				new DirectionalSoundInstance(
-					PING_SOUND_EVENT,
-					SoundCategory.MASTER,
-					Config.getPingVolume() / 100f,
-					1f,
-					pingLocation.getPos()
-				)
-			);
-		});
-	}
+        if (lastWorld != Game.world) {
+            lastWorld = Game.world;
+            pingRepo.clear();
+        }
 
-	public static void onRenderWorld(MatrixStack matrixStack, Matrix4f projectionMatrix, float tickDelta) {
-		if (Game.world == null) {
-			return;
-		}
+        var time = (int) Game.world.getTime();
 
-		if (lastWorld != Game.world) {
-			lastWorld = Game.world;
-			pingRepo.clear();
-		}
+        if (queuePing) {
+            if (time - lastPing > Config.getCorrectionPeriod() * TPS) {
+                ++pingSequence;
+            }
 
-		var time = (int)Game.world.getTime();
+            lastPing = time;
+            queuePing = false;
+            executePing(tickDelta);
+        }
 
-		if (queuePing) {
-			if (time - lastPing > Config.getCorrectionPeriod() * TPS) {
-				++pingSequence;
-			}
+        processPings(matrixStack, projectionMatrix, tickDelta, time);
+    }
 
-			lastPing = time;
-			queuePing = false;
-			executePing(tickDelta);
-		}
+    public static void onRenderGUI(DrawContext ctx, float tickDelta) {
+        if (Game.player == null || pingRepo.isEmpty()) {
+            return;
+        }
 
-		processPings(matrixStack, projectionMatrix, tickDelta, time);
-	}
+        var m = ctx.getMatrices();
 
-	public static void onRenderGUI(DrawContext ctx, float tickDelta) {
-		if (Game.player == null || pingRepo.isEmpty()) {
-			return;
-		}
+        var wnd = Game.getWindow();
+        var screenBounds = new Vec3d(wnd.getScaledWidth(), wnd.getScaledHeight(), 0);
+        var safeZoneTopLeft = new Vec2f(Config.getSafeZoneLeft(), Config.getSafeZoneTop());
+        var safeZoneBottomRight = new Vec2f((float) screenBounds.x - Config.getSafeZoneRight(), (float) screenBounds.y - Config.getSafeZoneBottom());
+        var safeScreenCentre = new Vec2f((safeZoneBottomRight.x - safeZoneTopLeft.x) * 0.5f, (safeZoneBottomRight.y - safeZoneTopLeft.y) * 0.5f);
+        var showDirectionIndicator = Config.isDirectionIndicatorVisible();
 
-		var m = ctx.getMatrices();
+        m.push();
+        m.translate(0f, 0f, -pingRepo.size());
 
-		var wnd = Game.getWindow();
-		var screenBounds = new Vec3d(wnd.getScaledWidth(), wnd.getScaledHeight(), 0);
-		var safeZoneTopLeft = new Vec2f(Config.getSafeZoneLeft(), Config.getSafeZoneTop());
-		var safeZoneBottomRight = new Vec2f((float)screenBounds.x - Config.getSafeZoneRight(), (float)screenBounds.y - Config.getSafeZoneBottom());
-		var safeScreenCentre = new Vec2f((safeZoneBottomRight.x - safeZoneTopLeft.x) * 0.5f, (safeZoneBottomRight.y - safeZoneTopLeft.y) * 0.5f);
-		var showDirectionIndicator = Config.isDirectionIndicatorVisible();
+        for (var ping : pingRepo) {
+            if (ping.screenPos == null || (ping.screenPos.z <= 0 && !showDirectionIndicator)) {
+                continue;
+            }
 
-		m.push();
-		m.translate(0f, 0f, -pingRepo.size());
+            m.translate(0f, 0f, 1f);
 
-		for (var ping : pingRepo) {
-			if (ping.screenPos == null || (ping.screenPos.z <= 0 && !showDirectionIndicator)) {
-				continue;
-			}
+            var pos = ping.screenPos;
+            var pingSize = Config.getPingSize() / 100f;
+            var pingScale = getDistanceScale(ping.distance) * pingSize * 0.4f;
 
-			m.translate(0f, 0f, 1f);
+            var pingDirectionVec = new Vec2f(pos.x - safeZoneTopLeft.x - safeScreenCentre.x, pos.y - safeZoneTopLeft.y - safeScreenCentre.y);
+            var behindCamera = false;
 
-			var pos = ping.screenPos;
-			var pingSize = Config.getPingSize() / 100f;
-			var pingScale = getDistanceScale(ping.distance) * pingSize * 0.4f;
+            if (pos.z <= 0) {
+                behindCamera = true;
+                pingDirectionVec = pingDirectionVec.multiply(-1);
+            }
 
-			var pingDirectionVec = new Vec2f(pos.x - safeZoneTopLeft.x - safeScreenCentre.x, pos.y - safeZoneTopLeft.y - safeScreenCentre.y);
-			var behindCamera = false;
+            var pingAngle = (float) Math.atan2(pingDirectionVec.y, pingDirectionVec.x);
+            var isOffScreen = behindCamera || pos.x < 0 || pos.x > screenBounds.x || pos.y < 0 || pos.y > screenBounds.y;
 
-			if (pos.z <= 0) {
-				behindCamera = true;
-				pingDirectionVec = pingDirectionVec.multiply(-1);
-			}
+            if (isOffScreen && showDirectionIndicator) {
+                var indicator = MathUtils.calculateAngleRectIntersection(pingAngle, safeZoneTopLeft, safeZoneBottomRight);
 
-			var pingAngle = (float)Math.atan2(pingDirectionVec.y, pingDirectionVec.x);
-			var isOffScreen = behindCamera || pos.x < 0 || pos.x > screenBounds.x || pos.y < 0 || pos.y > screenBounds.y;
+                m.push();
+                m.translate(indicator.x, indicator.y, 0f);
 
-			if (isOffScreen && showDirectionIndicator) {
-				var indicator = MathUtils.calculateAngleRectIntersection(pingAngle, safeZoneTopLeft, safeZoneBottomRight);
+                m.push();
+                m.scale(pingScale, pingScale, 1f);
+                var indicatorOffsetX = Math.cos(pingAngle + Math.PI) * 12;
+                var indicatorOffsetY = Math.sin(pingAngle + Math.PI) * 12;
+                m.translate(indicatorOffsetX, indicatorOffsetY, 0);
+                Draw.renderPing(ctx, ping.itemStack, Config.isItemIconVisible());
+                m.pop();
 
-				m.push();
-				m.translate(indicator.x, indicator.y, 0f);
+                m.push();
+                MathUtils.rotateZ(m, pingAngle);
+                m.scale(pingSize, pingSize, 1f);
 
-				m.push();
-				m.scale(pingScale, pingScale, 1f);
-				var indicatorOffsetX = Math.cos(pingAngle + Math.PI) * 12;
-				var indicatorOffsetY = Math.sin(pingAngle + Math.PI) * 12;
-				m.translate(indicatorOffsetX, indicatorOffsetY, 0);
-				Draw.renderPing(ctx, ping.itemStack, Config.isItemIconVisible());
-				m.pop();
+                m.scale(0.25f, 0.25f, 1f);
+                m.translate(-5f, 0f, 0f);
+                Draw.renderArrow(m, true);
+                m.scale(0.9f, 0.9f, 1f);
+                Draw.renderArrow(m, false);
+                m.pop();
 
-				m.push();
-				MathUtils.rotateZ(m, pingAngle);
-				m.scale(pingSize, pingSize, 1f);
+                m.pop();
+            }
 
-				m.scale(0.25f, 0.25f, 1f);
-				m.translate(-5f, 0f, 0f);
-				Draw.renderArrow(m, true);
-				m.scale(0.9f, 0.9f, 1f);
-				Draw.renderArrow(m, false);
-				m.pop();
+            if (!behindCamera) {
+                m.push();
+                m.translate(pos.x, pos.y, 0);
+                m.scale(pingScale, pingScale, 1f);
 
-				m.pop();
-			}
+                var text = String.format("%.1fm", ping.distance);
+                Draw.renderLabel(ctx, text);
+                Draw.renderPing(ctx, ping.itemStack, Config.isItemIconVisible());
 
-			if (!behindCamera) {
-				m.push();
-				m.translate(pos.x, pos.y, 0);
-				m.scale(pingScale, pingScale, 1f);
+                m.pop();
+            }
+        }
 
-				var text = String.format("%.1fm", ping.distance);
-				Draw.renderLabel(ctx, text);
-				Draw.renderPing(ctx, ping.itemStack, Config.isItemIconVisible());
+        m.pop();
+    }
 
-				m.pop();
-			}
-		}
+    private static void processPings(MatrixStack matrixStack, Matrix4f projectionMatrix, float tickDelta, int time) {
+        if (Game.player == null || pingRepo.isEmpty()) {
+            return;
+        }
 
-		m.pop();
-	}
+        var modelViewMatrix = matrixStack.peek().getPositionMatrix();
+        var cameraPos = Game.player.getCameraPosVec(tickDelta);
 
-	private static void processPings(MatrixStack matrixStack, Matrix4f projectionMatrix, float tickDelta, int time) {
-		if (Game.player == null || pingRepo.isEmpty()) {
-			return;
-		}
+        for (var ping : pingRepo) {
+            if (ping.getUuid() != null) {
+                var ent = getEntity(ping.getUuid());
 
-		var modelViewMatrix = matrixStack.peek().getPositionMatrix();
-		var cameraPos = Game.player.getCameraPosVec(tickDelta);
+                if (ent != null) {
+                    if (ent.getType() == EntityType.ITEM && Config.isItemIconVisible()) {
+                        ping.itemStack = ((ItemEntity) ent).getStack().copy();
+                    }
 
-		for (var ping : pingRepo) {
-			if (ping.getUuid() != null) {
-				var ent = getEntity(ping.getUuid());
+                    ping.setPos(ent.getLerpedPos(tickDelta).add(0, ent.getBoundingBox().getLengthY(), 0));
+                }
+            }
 
-				if (ent != null) {
-					if (ent.getType() == EntityType.ITEM && Config.isItemIconVisible()) {
-						ping.itemStack = ((ItemEntity)ent).getStack().copy();
-					}
+            ping.distance = cameraPos.distanceTo(ping.getPos());
+            ping.screenPos = MathUtils.worldToScreen(ping.getPos(), modelViewMatrix, projectionMatrix);
+            ping.aliveTime = time - ping.getSpawnTime();
+        }
 
-					ping.setPos(ent.getLerpedPos(tickDelta).add(0, ent.getBoundingBox().getLengthY(), 0));
-				}
-			}
+        pingRepo.removeIf(p -> p.aliveTime > Config.getPingDuration() * TPS);
+        pingRepo.sort((a, b) -> Double.compare(b.distance, a.distance));
+    }
 
-			ping.distance = cameraPos.distanceTo(ping.getPos());
-			ping.screenPos = MathUtils.worldToScreen(ping.getPos(), modelViewMatrix, projectionMatrix);
-			ping.aliveTime = time - ping.getSpawnTime();
-		}
+    private static void executePing(float tickDelta) {
+        var cameraEntity = Game.cameraEntity;
 
-		pingRepo.removeIf(p -> p.aliveTime > Config.getPingDuration() * TPS);
-		pingRepo.sort((a, b) -> Double.compare(b.distance, a.distance));
-	}
+        if (cameraEntity == null) {
+            return;
+        }
 
-	private static void executePing(float tickDelta) {
-		var cameraEntity = Game.cameraEntity;
+        var cameraDirection = cameraEntity.getRotationVec(tickDelta);
+        var hitResult = Raycast.traceDirectional(
+                cameraDirection,
+                tickDelta,
+                Math.min(Config.getRaycastDistance(), Config.getPingDistance()),
+                cameraEntity.isSneaking());
 
-		if (cameraEntity == null) {
-			return;
-		}
+        if (hitResult == null || hitResult.getType() == HitResult.Type.MISS) {
+            return;
+        }
 
-		var cameraDirection = cameraEntity.getRotationVec(tickDelta);
-		var hitResult = Raycast.traceDirectional(
-			cameraDirection,
-			tickDelta,
-			Math.min(Config.getRaycastDistance(), Config.getPingDistance()),
-			cameraEntity.isSneaking());
+        UUID uuid = null;
 
-		if (hitResult == null || hitResult.getType() == HitResult.Type.MISS) {
-			return;
-		}
+        if (hitResult.getType() == HitResult.Type.ENTITY) {
+            uuid = ((EntityHitResult) hitResult).getEntity().getUuid();
+        }
 
-		UUID uuid = null;
+        new PingLocationPacketC2S(Config.getChannel(), hitResult.getPos(), uuid, pingSequence).send();
+    }
 
-		if (hitResult.getType() == HitResult.Type.ENTITY) {
-			uuid = ((EntityHitResult)hitResult).getEntity().getUuid();
-		}
+    private static void addOrReplacePing(PingData newPing) {
+        int index = -1;
 
-		new PingLocationPacketC2S(Config.getChannel(), hitResult.getPos(), uuid, pingSequence).send();
-	}
+        for (int i = 0; i < pingRepo.size(); i++) {
+            var entry = pingRepo.get(i);
 
-	private static void addOrReplacePing(PingData newPing) {
-		int index = -1;
+            if (entry.getAuthor().equals(newPing.getAuthor()) && entry.getSequence() == newPing.getSequence()) {
+                index = i;
+                break;
+            }
+        }
 
-		for (int i = 0; i < pingRepo.size(); i++) {
-			var entry = pingRepo.get(i);
+        if (index != -1) {
+            pingRepo.set(index, newPing);
+        } else {
+            pingRepo.add(newPing);
+        }
+    }
 
-			if (entry.getAuthor().equals(newPing.getAuthor()) && entry.getSequence() == newPing.getSequence()) {
-				index = i;
-				break;
-			}
-		}
+    private static Entity getEntity(UUID uuid) {
+        if (Game.world == null) {
+            return null;
+        }
 
-		if (index != -1) {
-			pingRepo.set(index, newPing);
-		} else {
-			pingRepo.add(newPing);
-		}
-	}
+        for (var entity : Game.world.getEntities()) {
+            if (entity.getUuid().equals(uuid)) {
+                return entity;
+            }
+        }
 
-	private static Entity getEntity(UUID uuid) {
-		if (Game.world == null) {
-			return null;
-		}
+        return null;
+    }
 
-		for (var entity : Game.world.getEntities()) {
-			if (entity.getUuid().equals(uuid)) {
-				return entity;
-			}
-		}
+    private static float getDistanceScale(double distance) {
+        var scale = 2.0 / Math.pow(distance, 0.3);
 
-		return null;
-	}
-
-	private static float getDistanceScale(double distance) {
-		var scale = 2.0 / Math.pow(distance, 0.3);
-
-		return (float)Math.max(1.0, scale);
-	}
+        return (float) Math.max(1.0, scale);
+    }
 }

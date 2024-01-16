@@ -1,40 +1,40 @@
 {
-	"schemaVersion": 1,
-	"id": "ping-wheel",
-	"version": "${version}",
-	"name": "Ping Wheel",
-	"description": "Mark locations similar to the ping mechanism found in modern co-op multiplayer games.",
-	"authors": [
-		"Luken"
-	],
-	"contributors": [
-		"RXJpaw"
-	],
-	"contact": {
-		"homepage": "https://www.curseforge.com/minecraft/mc-mods/ping-wheel",
-		"sources": "https://github.com/LukenSkyne/Minecraft-Ping-Wheel",
-		"issues": "https://github.com/LukenSkyne/Minecraft-Ping-Wheel/issues"
-	},
-	"license": "MIT",
-	"icon": "icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"client": [
-			"nx.pingwheel.fabric.Client"
-		],
-		"main": [
-			"nx.pingwheel.fabric.Main"
-		],
-		"modmenu": [
-			"nx.pingwheel.fabric.integration.ModMenuIntegration"
-		]
-	},
-	"mixins": [
-		"ping-wheel.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=${fabric_loader_version}",
-		"fabric-api": "*",
-		"minecraft": "${fabric_compatible_range}"
-	}
+  "schemaVersion": 1,
+  "id": "ping-wheel",
+  "version": "${version}",
+  "name": "Ping Wheel",
+  "description": "Mark locations similar to the ping mechanism found in modern co-op multiplayer games.",
+  "authors": [
+    "Luken"
+  ],
+  "contributors": [
+    "RXJpaw"
+  ],
+  "contact": {
+    "homepage": "https://www.curseforge.com/minecraft/mc-mods/ping-wheel",
+    "sources": "https://github.com/LukenSkyne/Minecraft-Ping-Wheel",
+    "issues": "https://github.com/LukenSkyne/Minecraft-Ping-Wheel/issues"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "nx.pingwheel.fabric.Client"
+    ],
+    "main": [
+      "nx.pingwheel.fabric.Main"
+    ],
+    "modmenu": [
+      "nx.pingwheel.fabric.integration.ModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "ping-wheel.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${fabric_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${fabric_compatible_range}"
+  }
 }

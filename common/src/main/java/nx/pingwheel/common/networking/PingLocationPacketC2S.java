@@ -20,56 +20,55 @@ import static nx.pingwheel.common.config.Config.MAX_CHANNEL_LENGTH;
 @Getter
 public class PingLocationPacketC2S {
 
-	private String channel;
-	private Vec3d pos;
-	@Nullable
-	private UUID entity;
-	private int sequence;
+    public static final Identifier ID = new Identifier(MOD_ID + "-c2s", "ping-location");
+    private String channel;
+    private Vec3d pos;
+    @Nullable
+    private UUID entity;
+    private int sequence;
 
-	public static final Identifier ID = new Identifier(MOD_ID + "-c2s", "ping-location");
+    public static Optional<PingLocationPacketC2S> parse(PacketByteBuf buf) {
+        try {
+            var channel = buf.readString(MAX_CHANNEL_LENGTH);
+            var pos = new Vec3d(
+                    buf.readDouble(),
+                    buf.readDouble(),
+                    buf.readDouble());
+            var uuid = buf.readBoolean() ? buf.readUuid() : null;
+            var sequence = buf.readInt();
 
-	public void send() {
-		var netHandler = Game.getNetworkHandler();
+            if (buf.readableBytes() > 0) {
+                return Optional.empty();
+            }
 
-		if (netHandler == null) {
-			return;
-		}
+            return Optional.of(new PingLocationPacketC2S(channel, pos, uuid, sequence));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
 
-		var packet = new PacketByteBuf(Unpooled.buffer());
-		packet.writeIdentifier(PingLocationPacketC2S.ID);
+    public void send() {
+        var netHandler = Game.getNetworkHandler();
 
-		packet.writeString(channel, MAX_CHANNEL_LENGTH);
-		packet.writeDouble(pos.x);
-		packet.writeDouble(pos.y);
-		packet.writeDouble(pos.z);
-		packet.writeBoolean(entity != null);
+        if (netHandler == null) {
+            return;
+        }
 
-		if (entity != null) {
-			packet.writeUuid(entity);
-		}
+        var packet = new PacketByteBuf(Unpooled.buffer());
+        packet.writeIdentifier(PingLocationPacketC2S.ID);
 
-		packet.writeInt(sequence);
+        packet.writeString(channel, MAX_CHANNEL_LENGTH);
+        packet.writeDouble(pos.x);
+        packet.writeDouble(pos.y);
+        packet.writeDouble(pos.z);
+        packet.writeBoolean(entity != null);
 
-		netHandler.sendPacket(new CustomPayloadC2SPacket(packet));
-	}
+        if (entity != null) {
+            packet.writeUuid(entity);
+        }
 
-	public static Optional<PingLocationPacketC2S> parse(PacketByteBuf buf) {
-		try {
-			var channel = buf.readString(MAX_CHANNEL_LENGTH);
-			var pos = new Vec3d(
-				buf.readDouble(),
-				buf.readDouble(),
-				buf.readDouble());
-			var uuid = buf.readBoolean() ? buf.readUuid() : null;
-			var sequence = buf.readInt();
+        packet.writeInt(sequence);
 
-			if (buf.readableBytes() > 0) {
-				return Optional.empty();
-			}
-
-			return Optional.of(new PingLocationPacketC2S(channel, pos, uuid, sequence));
-		} catch (Exception e) {
-			return Optional.empty();
-		}
-	}
+        netHandler.sendPacket(new CustomPayloadC2SPacket(packet));
+    }
 }

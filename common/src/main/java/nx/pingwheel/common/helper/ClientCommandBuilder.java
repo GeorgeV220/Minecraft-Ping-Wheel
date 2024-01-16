@@ -18,66 +18,67 @@ import static nx.pingwheel.common.ClientGlobal.Game;
 import static nx.pingwheel.common.config.Config.MAX_CHANNEL_LENGTH;
 
 public class ClientCommandBuilder {
-	private ClientCommandBuilder() {}
+    private ClientCommandBuilder() {
+    }
 
-	public static <S> LiteralArgumentBuilder<S> build(TriConsumer<CommandContext<S>, Boolean, MutableText> responseHandler) {
-		UnaryOperator<String> formatChannel = (channel) -> {
-			if (channel.isEmpty()) {
-				return Text.translatable("ping-wheel.command.channel.name.default").getString();
-			}
+    public static <S> LiteralArgumentBuilder<S> build(TriConsumer<CommandContext<S>, Boolean, MutableText> responseHandler) {
+        UnaryOperator<String> formatChannel = (channel) -> {
+            if (channel.isEmpty()) {
+                return Text.translatable("ping-wheel.command.channel.name.default").getString();
+            }
 
-			return Text.translatable("ping-wheel.command.channel.name", channel).getString();
-		};
+            return Text.translatable("ping-wheel.command.channel.name", channel).getString();
+        };
 
-		var cmdChannel = LiteralArgumentBuilder.<S>literal("channel")
-			.executes((context) -> {
-				var currentChannel = ConfigHandler.getConfig().getChannel();
+        var cmdChannel = LiteralArgumentBuilder.<S>literal("channel")
+                .executes((context) -> {
+                    var currentChannel = ConfigHandler.getConfig().getChannel();
 
-				responseHandler.accept(context, true, Text.translatable("ping-wheel.command.channel.get.response", formatChannel.apply(currentChannel)));
-				return 1;
-			})
-			.then(RequiredArgumentBuilder.<S, String>argument("channel_name", StringArgumentType.string()).executes((context) -> {
-				var newChannel = context.getArgument("channel_name", String.class);
+                    responseHandler.accept(context, true, Text.translatable("ping-wheel.command.channel.get.response", formatChannel.apply(currentChannel)));
+                    return 1;
+                })
+                .then(RequiredArgumentBuilder.<S, String>argument("channel_name", StringArgumentType.string()).executes((context) -> {
+                    var newChannel = context.getArgument("channel_name", String.class);
 
-				if (newChannel.length() > MAX_CHANNEL_LENGTH) {
-					responseHandler.accept(context, false, Text.translatable("ping-wheel.command.channel.set.reject", MAX_CHANNEL_LENGTH));
-					return 0;
-				}
+                    if (newChannel.length() > MAX_CHANNEL_LENGTH) {
+                        responseHandler.accept(context, false, Text.translatable("ping-wheel.command.channel.set.reject", MAX_CHANNEL_LENGTH));
+                        return 0;
+                    }
 
-				ConfigHandler.getConfig().setChannel(newChannel);
-				ConfigHandler.save();
+                    ConfigHandler.getConfig().setChannel(newChannel);
+                    ConfigHandler.save();
 
-				responseHandler.accept(context, true, Text.translatable("ping-wheel.command.channel.set.response", formatChannel.apply(newChannel)));
-				return 1;
-			}));
+                    responseHandler.accept(context, true, Text.translatable("ping-wheel.command.channel.set.response", formatChannel.apply(newChannel)));
+                    return 1;
+                }));
 
-		var cmdConfig = LiteralArgumentBuilder.<S>literal("config")
-			.executes((context) -> {
-				Game.send(() -> Game.setScreen(new SettingsScreen()));
-				return 1;
-			});
+        var cmdConfig = LiteralArgumentBuilder.<S>literal("config")
+                .executes((context) -> {
+                    Game.send(() -> Game.setScreen(new SettingsScreen()));
+                    return 1;
+                });
 
-		Command<S> helpCallback = (context) -> {
-			BinaryOperator<String> form = (command, key) -> Text.translatable("ping-wheel.command.help.format", command, Text.translatable(key)).getString();
+        Command<S> helpCallback = (context) -> {
+            BinaryOperator<String> form = (command, key) -> Text.translatable("ping-wheel.command.help.format", command, Text.translatable(key)).getString();
 
-			var output = Text.empty();
-			output.append(form.apply("/pingwheel config", "ping-wheel.command.config.description"));
-			output.append("\n");
-			output.append(form.apply("/pingwheel channel", "ping-wheel.command.channel.get.description"));
-			output.append("\n");
-			output.append(form.apply("/pingwheel channel <channel_name>", "ping-wheel.command.channel.set.description"));
+            var output = Text.empty();
+            output.append(form.apply("/pingwheel config", "ping-wheel.command.config.description"));
+            output.append("\n");
+            output.append(form.apply("/pingwheel channel", "ping-wheel.command.channel.get.description"));
+            output.append("\n");
+            output.append(form.apply("/pingwheel channel <channel_name>", "ping-wheel.command.channel.set.description"));
 
-			responseHandler.accept(context, true, output);
-			return 1;
-		};
+            responseHandler.accept(context, true, output);
+            return 1;
+        };
 
-		var cmdHelp = LiteralArgumentBuilder.<S>literal("help")
-			.executes(helpCallback);
+        var cmdHelp = LiteralArgumentBuilder.<S>literal("help")
+                .executes(helpCallback);
 
-		return LiteralArgumentBuilder.<S>literal("pingwheel")
-			.executes(helpCallback)
-			.then(cmdHelp)
-			.then(cmdConfig)
-			.then(cmdChannel);
-	}
+        return LiteralArgumentBuilder.<S>literal("pingwheel")
+                .executes(helpCallback)
+                .then(cmdHelp)
+                .then(cmdConfig)
+                .then(cmdChannel);
+    }
 }

@@ -12,16 +12,16 @@ import static nx.pingwheel.common.Global.*;
 
 public class Main implements ModInitializer {
 
-	@Override
-	public void onInitialize() {
-		LOGGER.info("Init");
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Init");
 
-		ModVersion = FabricLoader.getInstance().getModContainer(MOD_ID)
-			.map(container -> container.getMetadata().getVersion().getFriendlyString())
-			.orElse("Unknown");
+        ModVersion = FabricLoader.getInstance().getModContainer(MOD_ID)
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("Unknown");
 
-		ServerPlayNetworking.registerGlobalReceiver(PingLocationPacketC2S.ID, (a, player, b, packet, c) -> ServerCore.onPingLocation(player, packet));
-		ServerPlayNetworking.registerGlobalReceiver(UpdateChannelPacketC2S.ID, (a, player, b, packet, c) -> ServerCore.onChannelUpdate(player, packet));
-		ServerPlayConnectionEvents.DISCONNECT.register((networkHandler, a) -> ServerCore.onPlayerDisconnect(networkHandler.player));
-	}
+        ServerPlayNetworking.registerGlobalReceiver(PingLocationPacketC2S.ID, (a, player, b, packet, c) -> ServerCore.onPingLocation(player, packet));
+        ServerPlayNetworking.registerGlobalReceiver(UpdateChannelPacketC2S.ID, (a, player, b, packet, c) -> ServerCore.onChannelUpdate(player, packet));
+        ServerPlayConnectionEvents.DISCONNECT.register((networkHandler, a) -> ServerCore.onPlayerDisconnect(networkHandler.player));
+    }
 }

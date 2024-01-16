@@ -1,8 +1,8 @@
 {
-	"ping": {
-		"subtitle": "ping-wheel.subtitles.ping",
-		"sounds": [
-			"ping-wheel:ping"
-		]
-	}
+  "ping": {
+    "subtitle": "ping-wheel.subtitles.ping",
+    "sounds": [
+      "ping-wheel:ping"
+    ]
+  }
 }

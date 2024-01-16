@@ -10,27 +10,25 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 public class Config {
-	int pingVolume = 100;
-	int pingDuration = 7;
-	int pingDistance = 2048;
-	float correctionPeriod = 1f;
-	boolean itemIconVisible = true;
-	boolean directionIndicatorVisible = true;
-	int pingSize = 100;
-	String channel = "";
+    public static final Integer MAX_CHANNEL_LENGTH = 128;
+    int pingVolume = 100;
+    int pingDuration = 7;
+    int pingDistance = 2048;
+    float correctionPeriod = 1f;
+    boolean itemIconVisible = true;
+    boolean directionIndicatorVisible = true;
+    int pingSize = 100;
+    String channel = "";
+    // hidden from settings screen
+    int raycastDistance = 1024;
+    int safeZoneLeft = 5;
+    int safeZoneRight = 5;
+    int safeZoneTop = 5;
+    int safeZoneBottom = 60;
 
-	// hidden from settings screen
-	int raycastDistance = 1024;
-	int safeZoneLeft = 5;
-	int safeZoneRight = 5;
-	int safeZoneTop = 5;
-	int safeZoneBottom = 60;
-
-	public static final Integer MAX_CHANNEL_LENGTH = 128;
-
-	public void validate() {
-		if (channel.length() > MAX_CHANNEL_LENGTH) {
-			channel = channel.substring(0, MAX_CHANNEL_LENGTH);
-		}
-	}
+    public void validate() {
+        if (channel.length() > MAX_CHANNEL_LENGTH) {
+            channel = channel.substring(0, MAX_CHANNEL_LENGTH);
+        }
+    }
 }

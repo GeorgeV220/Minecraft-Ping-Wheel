@@ -75,7 +75,7 @@ jobs:
 
   publish:
     name: "Publish"
-    needs: [prepare, build]
+    needs: [ prepare, build ]
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1

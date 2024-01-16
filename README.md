@@ -26,7 +26,8 @@ This simple mod provides such pinging mechanism for the fabric and forge mod loa
 Default Keybind is "Mouse5" aka "Forward" to ping.  
 The Settings can also be opened from the Mod Menu integration.
 
-If you are looking to use the mod on Bukkit servers, you can install our [official Plugin](https://github.com/RXJpaw/Minecraft-Ping-Wheel-Plugin/).
+If you are looking to use the mod on Bukkit servers, you can install
+our [official Plugin](https://github.com/RXJpaw/Minecraft-Ping-Wheel-Plugin/).
 
 ## Gallery
 
