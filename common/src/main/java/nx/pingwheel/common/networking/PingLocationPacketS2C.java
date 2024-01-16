@@ -23,6 +23,7 @@ public class PingLocationPacketS2C {
     @Nullable
     private UUID entity;
     private int sequence;
+    private String authorName;
     private UUID author;
 
     public static Optional<PingLocationPacketS2C> parse(PacketByteBuf buf) {
@@ -34,13 +35,14 @@ public class PingLocationPacketS2C {
                     buf.readDouble());
             var uuid = buf.readBoolean() ? buf.readUuid() : null;
             var sequence = (buf.readableBytes() > 0) ? buf.readInt() : -1;
+            var authorName = (buf.readableBytes() > 0) ? buf.readString() : "";
             var author = (buf.readableBytes() > 0) ? buf.readUuid() : UUID.randomUUID();
 
             if (buf.readableBytes() > 0) {
                 return Optional.empty();
             }
 
-            return Optional.of(new PingLocationPacketS2C(channel, pos, uuid, sequence, author));
+            return Optional.of(new PingLocationPacketS2C(channel, pos, uuid, sequence, authorName, author));
         } catch (Exception e) {
             return Optional.empty();
         }

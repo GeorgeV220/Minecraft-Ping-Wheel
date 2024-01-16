@@ -12,6 +12,8 @@ import net.minecraft.util.math.ColorHelper;
 import net.minecraft.util.math.Vec2f;
 import org.lwjgl.opengl.GL11;
 
+import java.util.List;
+
 import static nx.pingwheel.common.ClientGlobal.Game;
 import static nx.pingwheel.common.ClientGlobal.PING_TEXTURE_ID;
 import static nx.pingwheel.common.resource.ResourceReloadListener.hasCustomTexture;
@@ -20,23 +22,28 @@ public class Draw {
     private static final int WHITE = ColorHelper.Argb.getArgb(255, 255, 255, 255);
     private static final int SHADOW_BLACK = ColorHelper.Argb.getArgb(64, 0, 0, 0);
     private static final int LIGHT_VALUE_MAX = 15728880;
+
     private Draw() {
     }
 
-    public static void renderLabel(DrawContext ctx, String text) {
+    public static void renderLabels(DrawContext ctx, List<String> texts, Vec2f baseOffset) {
         var matrices = ctx.getMatrices();
 
-        var textMetrics = new Vec2f(
-                Game.textRenderer.getWidth(text),
-                Game.textRenderer.fontHeight
-        );
-        var textOffset = textMetrics.multiply(-0.5f).add(new Vec2f(0f, textMetrics.y * -1.5f));
+        for (int i = 0; i < texts.size(); i++) {
+            String text = texts.get(i);
 
-        matrices.push();
-        matrices.translate(textOffset.x, textOffset.y, 0);
-        ctx.fill(-2, -2, (int) textMetrics.x + 1, (int) textMetrics.y, SHADOW_BLACK);
-        ctx.drawText(Game.textRenderer, text, 0, 0, WHITE, false);
-        matrices.pop();
+            var textMetrics = new Vec2f(
+                    Game.textRenderer.getWidth(text),
+                    Game.textRenderer.fontHeight
+            );
+            var textOffset = textMetrics.multiply(-0.5f).add(new Vec2f(0f, textMetrics.y * -1.5f * (baseOffset.y + i)));
+
+            matrices.push();
+            matrices.translate(textOffset.x, textOffset.y, 0);
+            ctx.fill(-2, -2, (int) textMetrics.x + 1, (int) textMetrics.y, SHADOW_BLACK);
+            ctx.drawText(Game.textRenderer, text, 0, 0, WHITE, false);
+            matrices.pop();
+        }
     }
 
     public static void renderPing(DrawContext ctx, ItemStack itemStack, boolean drawItemIcon) {

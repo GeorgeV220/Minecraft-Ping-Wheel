@@ -1,5 +1,6 @@
 {
   "ping-wheel.key.mark-location": "Mark Location",
+  "ping-wheel.cooldown": "Please wait %d more second(s) before sending another ping",
   "ping-wheel.key.open-settings": "Open Settings",
   "ping-wheel.subtitles.ping": "Location Ping Alert",
   "ping-wheel.settings.pingVolume": "Ping Volume: %s",

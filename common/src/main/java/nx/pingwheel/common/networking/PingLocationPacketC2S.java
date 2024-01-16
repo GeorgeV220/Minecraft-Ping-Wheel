@@ -26,6 +26,7 @@ public class PingLocationPacketC2S {
     @Nullable
     private UUID entity;
     private int sequence;
+    private String authorName;
 
     public static Optional<PingLocationPacketC2S> parse(PacketByteBuf buf) {
         try {
@@ -36,12 +37,13 @@ public class PingLocationPacketC2S {
                     buf.readDouble());
             var uuid = buf.readBoolean() ? buf.readUuid() : null;
             var sequence = buf.readInt();
+            var authorName = buf.readString();
 
             if (buf.readableBytes() > 0) {
                 return Optional.empty();
             }
 
-            return Optional.of(new PingLocationPacketC2S(channel, pos, uuid, sequence));
+            return Optional.of(new PingLocationPacketC2S(channel, pos, uuid, sequence, authorName));
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -68,6 +70,7 @@ public class PingLocationPacketC2S {
         }
 
         packet.writeInt(sequence);
+        packet.writeString(authorName);
 
         netHandler.sendPacket(new CustomPayloadC2SPacket(packet));
     }

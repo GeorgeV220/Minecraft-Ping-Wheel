@@ -3,6 +3,7 @@ package nx.pingwheel.common.core;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -10,6 +11,8 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec2f;
@@ -24,7 +27,9 @@ import nx.pingwheel.common.networking.PingLocationPacketS2C;
 import nx.pingwheel.common.sound.DirectionalSoundInstance;
 import org.joml.Matrix4f;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static nx.pingwheel.common.ClientGlobal.*;
@@ -38,11 +43,27 @@ public class ClientCore {
     private static ClientWorld lastWorld = null;
     private static int lastPing = 0;
     private static int pingSequence = 0;
+
     private ClientCore() {
     }
 
+    private static long lastMarkTime = 0;
+    private static final long COOLDOWN_DURATION = 3;
+
     public static void markLocation() {
-        queuePing = true;
+        long currentTime = Instant.now().toEpochMilli();
+        long timeLeft = (lastMarkTime + (COOLDOWN_DURATION * 1000)) - currentTime;
+
+        if (timeLeft <= 0) {
+            queuePing = true;
+            lastMarkTime = currentTime;
+        } else {
+            ClientPlayerEntity player = Game.player;
+            if (player != null) {
+                int secondsLeft = (int) Math.ceil(timeLeft / 1000.0);
+                player.sendMessage(Text.translatable("ping-wheel.cooldown", String.format("%d", secondsLeft)).formatted(Formatting.RED), true);
+            }
+        }
     }
 
     public static void onPingLocation(PacketByteBuf packet) {
@@ -71,6 +92,7 @@ public class ClientCore {
                     pingLocation.getPos(),
                     pingLocation.getEntity(),
                     pingLocation.getAuthor(),
+                    pingLocation.getAuthorName(),
                     pingLocation.getSequence(),
                     (int) Game.world.getTime()
             ));
@@ -183,9 +205,8 @@ public class ClientCore {
                 m.push();
                 m.translate(pos.x, pos.y, 0);
                 m.scale(pingScale, pingScale, 1f);
-
-                var text = String.format("%.1fm", ping.distance);
-                Draw.renderLabel(ctx, text);
+                List<String> texts = List.of(String.format("%.1fm", ping.distance), ping.getAuthorName());
+                Draw.renderLabels(ctx, texts, new Vec2f(0, 1.3F));
                 Draw.renderPing(ctx, ping.itemStack, Config.isItemIconVisible());
 
                 m.pop();
@@ -249,7 +270,12 @@ public class ClientCore {
             uuid = ((EntityHitResult) hitResult).getEntity().getUuid();
         }
 
-        new PingLocationPacketC2S(Config.getChannel(), hitResult.getPos(), uuid, pingSequence).send();
+        ClientPlayerEntity player = Game.player;
+        if (player == null) {
+            return;
+        }
+
+        new PingLocationPacketC2S(Config.getChannel(), hitResult.getPos(), uuid, pingSequence, player.getGameProfile().getName()).send();
     }
 
     private static void addOrReplacePing(PingData newPing) {
